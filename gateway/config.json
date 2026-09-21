@@ -1,0 +1,52 @@
+{
+  "_comentario": "Configuracion del AI Agent. Cambiar provider y api_key segun el servicio que uses.",
+  
+  "provider": "openrouter",
+  "api_key": "TU_API_KEY_AQUI",
+  "model": "meta-llama/llama-3.1-8b-instruct:free",
+  "base_url": "https://openrouter.ai/api/v1",
+  
+  "host": "127.0.0.1",
+  "port": 8642,
+  "max_tokens": 500,
+  "temperature": 0.7,
+  "system_prompt": "Eres un asistente de IA personal. Hablas en español natural, eres directo y util. Tienes acceso a herramientas del sistema.",
+  "max_history": 50,
+  
+  "_providers_disponibles": {
+    "openrouter": {
+      "base_url": "https://openrouter.ai/api/v1",
+      "modelos_gratuitos": [
+        "meta-llama/llama-3.1-8b-instruct:free",
+        "google/gemma-2-9b-it:free",
+        "mistralai/mistral-7b-instruct:free",
+        "qwen/qwen-2.5-7b-instruct:free"
+      ],
+      "nota": "Registrarse en openrouter.ai para obtener API key gratis"
+    },
+    "groq": {
+      "base_url": "https://api.groq.com/openai/v1",
+      "modelos": ["llama-3.1-8b-instant", "mixtral-8x7b-32768"],
+      "nota": "Registrarse en groq.com para API key gratis (velocidad extrema)"
+    },
+    "openai": {
+      "base_url": "https://api.openai.com/v1",
+      "modelos": ["gpt-4o-mini", "gpt-3.5-turbo"],
+      "nota": "Requiere API key de pago"
+    },
+    "together": {
+      "base_url": "https://api.together.xyz/v1",
+      "modelos": ["meta-llama/Llama-3-8b-chat-hf"],
+      "nota": "Registrarse en together.ai para creditos gratis"
+    },
+    "deepseek": {
+      "base_url": "https://api.deepseek.com/v1",
+      "modelos": ["deepseek-chat", "deepseek-coder"],
+      "nota": "API barata, buena calidad"
+    },
+    "ollama": {
+      "base_url": "http://localhost:11434",
+      "nota": "Requiere GPU local, modelos gratis pero necesitas hardware"
+    }
+  }
+}
