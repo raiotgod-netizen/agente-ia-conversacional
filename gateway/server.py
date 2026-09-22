@@ -229,6 +229,15 @@ def extract_tool_call(response):
 # HTTP SERVER
 # ══════════════════════════════════════════════════════════════
 class Handler(BaseHTTPRequestHandler):
+    def do_OPTIONS(self):
+        """Maneja preflight CORS."""
+        self.send_response(204)
+        self.send_header('Access-Control-Allow-Origin', '*')
+        self.send_header('Access-Control-Allow-Methods', 'GET, POST, OPTIONS')
+        self.send_header('Access-Control-Allow-Headers', 'Content-Type')
+        self.send_header('Access-Control-Max-Age', '86400')
+        self.end_headers()
+
     def do_GET(self):
         if self.path == "/health":
             self._respond(200, {"status": "ok", "model": CONFIG["model"], "provider": CONFIG["provider"]})
@@ -238,7 +247,7 @@ class Handler(BaseHTTPRequestHandler):
             self._respond(200, {"history": memory.get_context(50)})
         else:
             self._respond(404, {"error": "not found"})
-    
+
     def do_POST(self):
         if self.path == "/chat":
             self._handle_chat()
