@@ -413,11 +413,13 @@ const transcriptText = document.getElementById('transcript-text');
 const transcriptInterim = document.getElementById('transcript-interim');
 const micStatus = document.getElementById('mic-status');
 
+let isListening = false;
 let recognition = null;
 let isProcessing = false;
 let finalTranscript = '';
 let silenceTimeout = null;
 let isMicActive = false;
+let isSpeaking = false;  // TTS activo
 let cycleCount = 0;
 
 // ═══════════════════════════════════════════
@@ -618,6 +620,9 @@ function initSpeech(){
   };
   
   recognition.onresult = (event) => {
+    // Ignorar si TTS esta hablando (anti-echo)
+    if(isSpeaking) return;
+    
     let interim = '';
     let final = '';
     
@@ -653,14 +658,16 @@ function initSpeech(){
   };
   
   recognition.onend = () => {
-    if(!isProcessing){
+    // No reiniciar si TTS esta hablando o esta procesando
+    if(!isProcessing && !isSpeaking){
       try { recognition.start(); } catch {}
     }
   };
   
   recognition.onerror = (e) => {
     if(e.error === 'no-speech') return;
-    if(e.error !== 'aborted' && !isProcessing){
+    // No reiniciar si TTS esta hablando
+    if(e.error !== 'aborted' && !isProcessing && !isSpeaking){
       setTimeout(() => { try { recognition.start(); } catch {} }, 1000);
     }
   };
@@ -683,6 +690,12 @@ function speak(text){
                      .trim();
   if(!clean) return;
   
+  // Mutar microfono para evitar echo
+  isSpeaking = true;
+  if(recognition){
+    try { recognition.stop(); } catch {}
+  }
+  
   statusDot.className = 'speaking';
   document.getElementById('status-label').textContent = 'SPEAKING';
   
@@ -690,6 +703,23 @@ function speak(text){
   u.lang = 'es-CL';
   u.rate = 1.0;
   u.onend = () => {
+    isSpeaking = false;
+    // Reiniciar microfono despues de hablar
+    if(!isProcessing && recognition){
+      setTimeout(() => {
+        try { recognition.start(); } catch {}
+      }, 300);  // Pequeña pausa para evitar eco residual
+    }
+    statusDot.className = isMicActive ? 'listening' : 'idle';
+    document.getElementById('status-label').textContent = isMicActive ? 'LISTENING' : 'IDLE';
+  };
+  u.onerror = () => {
+    isSpeaking = false;
+    if(!isProcessing && recognition){
+      setTimeout(() => {
+        try { recognition.start(); } catch {}
+      }, 300);
+    }
     statusDot.className = isMicActive ? 'listening' : 'idle';
     document.getElementById('status-label').textContent = isMicActive ? 'LISTENING' : 'IDLE';
   };
