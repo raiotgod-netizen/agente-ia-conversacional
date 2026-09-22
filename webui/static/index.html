@@ -3,112 +3,216 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>AI Agent</title>
+<title>AI Agent Core</title>
 <style>
 *{margin:0;padding:0;box-sizing:border-box}
-:root{--bg:#0a0a0f;--surface:#12121a;--border:#1e1e2e;--accent:#00d4ff;--accent2:#7c3aed;--text:#e0e0e0;--text2:#888;--user-bg:#1a1a2e;--ai-bg:#0d1117}
-body{font-family:'Segoe UI',system-ui,sans-serif;background:var(--bg);color:var(--text);height:100vh;display:flex;flex-direction:column;overflow:hidden}
+html,body{width:100%;height:100%;background:#0a0a0f;overflow:hidden;
+  background-image:radial-gradient(circle at 50% 50%,rgba(20,35,60,0.3) 0%,transparent 80%),
+  linear-gradient(rgba(18,24,38,0.2) 1px,transparent 1px),
+  linear-gradient(90deg,rgba(18,24,38,0.2) 1px,transparent 1px);
+  background-size:100% 100%,40px 40px,40px 40px;
+  font-family:'Consolas','Courier New',monospace;
+  cursor:default;user-select:none;color:#e0e0e0}
 
-/* Header */
-.header{padding:12px 20px;background:var(--surface);border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px}
-.header .logo{width:32px;height:32px;border-radius:50%;background:linear-gradient(135deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px}
-.header .info{flex:1}
-.header .info h1{font-size:16px;font-weight:600}
-.header .info span{font-size:11px;color:var(--text2)}
-.status-dot{width:8px;height:8px;border-radius:50%;background:#4caf50}
-.status-dot.offline{background:#f44336}
+/* ─── Status Dot ─── */
+#status-dot{position:fixed;top:12px;left:50%;transform:translateX(-50%);width:10px;height:10px;border-radius:50%;z-index:999;transition:.3s}
+#status-dot.idle{background:#ff8800;box-shadow:0 0 8px rgba(255,136,0,0.5)}
+#status-dot.listening{background:#44ff44;box-shadow:0 0 12px rgba(68,255,68,0.6);animation:pulse-green 1s infinite}
+#status-dot.thinking{background:#ffaa00;box-shadow:0 0 12px rgba(255,170,0,0.6);animation:pulse-yellow .6s infinite}
+#status-dot.speaking{background:#ff4444;box-shadow:0 0 16px rgba(255,68,68,0.7);animation:pulse-red .4s infinite}
+#status-dot.offline{background:#666;box-shadow:0 0 4px rgba(100,100,100,0.3)}
+@keyframes pulse-green{0%,100%{opacity:.6;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.3)}}
+@keyframes pulse-yellow{0%,100%{opacity:.5;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.4)}}
+@keyframes pulse-red{0%,100%{opacity:.5;transform:translateX(-50%) scale(1)}50%{opacity:1;transform:translateX(-50%) scale(1.2)}}
 
-/* Chat */
-.chat{flex:1;overflow-y:auto;padding:20px;display:flex;flex-direction:column;gap:16px}
-.msg{max-width:80%;padding:12px 16px;border-radius:12px;line-height:1.5;font-size:14px;animation:fadeIn .2s}
-.msg.user{align-self:flex-end;background:var(--user-bg);border:1px solid var(--border)}
-.msg.ai{align-self:flex-start;background:var(--ai-bg);border:1px solid var(--border)}
-.msg.ai pre{background:#000;padding:8px;border-radius:6px;overflow-x:auto;font-size:12px;margin-top:8px}
-.msg.ai code{font-family:'Consolas',monospace;font-size:12px}
-.typing{display:flex;gap:4px;padding:12px 16px}
-.typing span{width:6px;height:6px;border-radius:50%;background:var(--accent);animation:bounce .6s infinite}
-.typing span:nth-child(2){animation-delay:.1s}
-.typing span:nth-child(3){animation-delay:.2s}
-@keyframes bounce{0%,100%{transform:translateY(0)}50%{transform:translateY(-4px)}}
-@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+/* ─── HUD Window ─── */
+.window{position:fixed;background:rgba(5,8,15,0.85);border:1px solid rgba(255,136,0,0.15);border-radius:8px;backdrop-filter:blur(12px);box-shadow:0 0 20px rgba(255,100,0,0.05),inset 0 0 30px rgba(255,80,0,0.02);z-index:10;transform-style:preserve-3d}
+.win-title{height:24px;background:rgba(40,25,0,0.5);border-radius:7px 7px 0 0;display:flex;align-items:center;justify-content:space-between;padding:0 8px;border-bottom:1px solid rgba(255,136,0,0.1);font-size:8px;letter-spacing:1px;color:rgba(255,170,0,0.7)}
+.win-body{padding:8px;font-size:10px;color:rgba(255,170,0,0.6);overflow:hidden}
 
-/* Input area */
-.input-area{padding:16px 20px;background:var(--surface);border-top:1px solid var(--border)}
-.input-row{display:flex;gap:8px;align-items:flex-end}
-textarea{flex:1;background:var(--bg);border:1px solid var(--border);border-radius:8px;padding:10px 14px;color:var(--text);font-size:14px;resize:none;min-height:44px;max-height:120px;font-family:inherit;outline:none;transition:border-color .2s}
-textarea:focus{border-color:var(--accent)}
-textarea::placeholder{color:var(--text2)}
-.btn{width:44px;height:44px;border-radius:8px;border:none;cursor:pointer;display:flex;align-items:center;justify-content:center;transition:all .2s;font-size:18px}
-.btn-send{background:var(--accent);color:#000}
-.btn-send:hover{background:#00b8d4}
-.btn-send:disabled{opacity:.3;cursor:not-allowed}
-.btn-mic{background:var(--surface);border:1px solid var(--border);color:var(--text)}
-.btn-mic:hover{border-color:var(--accent)}
-.btn-mic.recording{background:#f44336;border-color:#f44336;color:#fff;animation:pulse 1s infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 rgba(244,67,54,.4)}50%{box-shadow:0 0 0 8px rgba(244,67,54,0)}}
+/* ─── Chat Window ─── */
+#win-chat{top:40px;left:50%;transform:translateX(-50%);width:500px;height:calc(100vh - 100px);display:flex;flex-direction:column}
+#win-chat .win-body{flex:1;display:flex;flex-direction:column;overflow:hidden;padding:4px 8px}
+#chat-log{flex:1;overflow-y:auto;font-size:11px;line-height:1.5;color:rgba(255,200,0,0.8);scrollbar-width:thin;scrollbar-color:rgba(255,136,0,0.2) transparent}
+#chat-log::-webkit-scrollbar{width:4px}
+#chat-log::-webkit-scrollbar-track{background:transparent}
+#chat-log::-webkit-scrollbar-thumb{background:rgba(255,136,0,0.2);border-radius:2px}
+.msg{margin:4px 0;padding:6px 8px;border-radius:4px}
+.msg.user{text-align:right;color:rgba(100,200,255,0.8)}
+.msg.ai{color:rgba(255,200,0,0.8)}
+.msg.error{color:rgba(255,80,80,0.8);font-size:9px}
+.msg pre{background:rgba(0,0,0,0.5);padding:4px;border-radius:3px;overflow-x:auto;font-size:9px;margin:4px 0;border:1px solid rgba(255,136,0,0.1)}
+.msg code{font-family:'Consolas',monospace;font-size:9px}
+.typing{color:rgba(255,170,0,0.4);font-size:9px;animation:blink 1s infinite}
+@keyframes blink{0%,50%{opacity:1}51%,100%{opacity:0}}
 
-/* Footer */
-.footer{padding:8px 20px;text-align:center;font-size:11px;color:var(--text2);background:var(--surface);border-top:1px solid var(--border)}
+/* ─── Input Bar ─── */
+#input-bar{display:flex;align-items:center;gap:4px;padding:4px 0;border-top:1px solid rgba(255,136,0,0.1);margin-top:4px}
+#input-bar .prompt{color:rgba(255,170,0,0.5);font-size:10px}
+#input{flex:1;background:transparent;border:none;outline:none;color:rgba(255,200,0,0.85);font-family:'Consolas',monospace;font-size:11px}
+#input::placeholder{color:rgba(255,136,0,0.2)}
+#mic-btn{background:none;border:1px solid rgba(255,136,0,0.2);border-radius:3px;color:rgba(255,170,0,0.5);cursor:pointer;font-size:10px;padding:2px 6px;transition:.2s}
+#mic-btn:hover{border-color:rgba(255,170,0,0.5);color:rgba(255,200,0,0.8)}
+#mic-btn.recording{background:rgba(255,60,60,0.3);border-color:rgba(255,60,60,0.5);color:#ff4444;animation:pulse-mic 1s infinite}
+@keyframes pulse-mic{0%,100%{box-shadow:0 0 0 0 rgba(255,60,60,0.3)}50%{box-shadow:0 0 0 4px rgba(255,60,60,0)}}
+#send-btn{background:none;border:1px solid rgba(255,136,0,0.2);border-radius:3px;color:rgba(255,170,0,0.5);cursor:pointer;font-size:10px;padding:2px 8px;transition:.2s}
+#send-btn:hover{border-color:rgba(255,170,0,0.5);color:rgba(255,200,0,0.8)}
 
-/* Toast */
-.toast{position:fixed;top:20px;right:20px;background:var(--surface);border:1px solid var(--border);border-radius:8px;padding:12px 16px;font-size:13px;z-index:100;animation:slideIn .3s}
-@keyframes slideIn{from{transform:translateX(100%);opacity:0}to{transform:translateX(0);opacity:1}}
+/* ─── Info Window ─── */
+#win-info{top:40px;right:20px;width:180px}
+.stat-row{display:flex;justify-content:space-between;margin:2px 0;font-size:8px;color:rgba(255,150,0,0.5)}
+.stat-row .val{color:rgba(255,200,0,0.9);font-weight:bold}
+.bar-bg{height:3px;background:rgba(255,100,0,0.1);border-radius:2px;margin:1px 0 4px;overflow:hidden}
+.bar-fill{height:100%;border-radius:2px;transition:width .3s}
+.bar-fill.cpu{background:linear-gradient(90deg,#ff6600,#ffaa00)}
+.bar-fill.ram{background:linear-gradient(90deg,#ff8800,#ffcc44)}
+
+/* ─── Clock Window ─── */
+#win-clock{bottom:20px;right:20px;width:180px}
+.clock-display{font-size:24px;font-weight:bold;text-align:center;color:rgba(255,200,0,0.85);text-shadow:0 0 15px rgba(255,150,0,0.2);letter-spacing:2px}
+.clock-date{text-align:center;font-size:8px;color:rgba(255,150,0,0.35);margin-top:2px;letter-spacing:1px}
+
+/* ─── Terminal Window ─── */
+#win-term{bottom:20px;left:20px;width:250px;height:150px}
+#term-log{font-size:8px;line-height:1.4;color:rgba(255,170,0,0.5);overflow-y:auto;height:calc(100% - 24px);scrollbar-width:thin;scrollbar-color:rgba(255,136,0,0.2) transparent}
+#term-log::-webkit-scrollbar{width:3px}
+#term-log::-webkit-scrollbar-thumb{background:rgba(255,136,0,0.2);border-radius:2px}
+.term-line{margin:1px 0}
+.term-line .prompt{color:rgba(255,200,0,0.3)}
+.term-line .cmd{color:rgba(255,200,0,0.7)}
+.term-line .ok{color:rgba(255,170,0,0.4)}
+.term-line .err{color:rgba(255,80,80,0.5)}
+
+/* ─── Scan Line ─── */
+.scan-line{position:fixed;top:0;left:0;width:100%;height:1px;background:linear-gradient(90deg,transparent,rgba(255,200,0,0.15),transparent);z-index:5;pointer-events:none;animation:scan 8s linear infinite}
+@keyframes scan{0%{top:0}100%{top:100vh}}
+
+/* ─── Toast ─── */
+.toast{position:fixed;bottom:40px;left:50%;transform:translateX(-50%) translateY(100px);background:rgba(5,8,15,0.9);border:1px solid rgba(255,136,0,0.25);border-radius:4px;padding:6px 12px;font-size:9px;color:rgba(255,170,0,0.7);z-index:100;transition:transform .4s cubic-bezier(0.175,0.885,0.32,1.275);backdrop-filter:blur(8px)}
+.toast.show{transform:translateX(-50%) translateY(0)}
 </style>
 </head>
 <body>
 
-<div class="header">
-  <div class="logo">AI</div>
-  <div class="info">
-    <h1>AI Agent</h1>
-    <span id="model-info">Conectando...</span>
+<div class="scan-line"></div>
+<div id="status-dot" class="offline"></div>
+
+<!-- Chat Window -->
+<div class="window" id="win-chat">
+  <div class="win-title">
+    <span>AI AGENT</span>
+    <span id="model-label">...</span>
   </div>
-  <div class="status-dot offline" id="status-dot"></div>
-</div>
-
-<div class="chat" id="chat">
-  <div class="msg ai">Hola, soy tu asistente de IA. Puedo ejecutar comandos, buscar en internet, leer archivos y mas. En que puedo ayudarte?</div>
-</div>
-
-<div class="input-area">
-  <div class="input-row">
-    <textarea id="input" placeholder="Escribe un mensaje..." rows="1"></textarea>
-    <button class="btn btn-mic" id="mic-btn" title="Dictar por voz">🎤</button>
-    <button class="btn btn-send" id="send-btn" title="Enviar">▶</button>
+  <div class="win-body">
+    <div id="chat-log">
+      <div class="msg ai">Sistema inicializado. Listo para recibir comandos.</div>
+    </div>
+    <div id="input-bar">
+      <span class="prompt">></span>
+      <input id="input" placeholder="Escribe un comando..." autocomplete="off">
+      <button id="mic-btn" title="Dictar por voz">MIC</button>
+      <button id="send-btn" title="Enviar">ENVIAR</button>
+    </div>
   </div>
 </div>
 
-<div class="footer">AI Agent Kit — Modelos locales y cloud</div>
+<!-- Info Window -->
+<div class="window" id="win-info">
+  <div class="win-title"><span>SISTEMA</span></div>
+  <div class="win-body">
+    <div class="stat-row"><span>CPU</span><span class="val" id="cpu-val">--%</span></div>
+    <div class="bar-bg"><div class="bar-fill cpu" id="cpu-bar" style="width:0%"></div></div>
+    <div class="stat-row"><span>RAM</span><span class="val" id="ram-val">--%</span></div>
+    <div class="bar-bg"><div class="bar-fill ram" id="ram-bar" style="width:0%"></div></div>
+    <div class="stat-row"><span>PROVIDER</span><span class="val" id="provider-val">--</span></div>
+    <div class="stat-row"><span>TOOLS</span><span class="val" id="tools-val">--</span></div>
+    <div class="stat-row"><span>STATUS</span><span class="val" id="conn-val">OFFLINE</span></div>
+  </div>
+</div>
+
+<!-- Clock Window -->
+<div class="window" id="win-clock">
+  <div class="win-title"><span>RELOJ</span></div>
+  <div class="win-body">
+    <div class="clock-display" id="clock-time">00:00:00</div>
+    <div class="clock-date" id="clock-date">--</div>
+  </div>
+</div>
+
+<!-- Terminal Window -->
+<div class="window" id="win-term">
+  <div class="win-title"><span>LOG</span></div>
+  <div class="win-body" style="padding:4px">
+    <div id="term-log"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
 
 <script>
 // ═══════════════════════════════════════════
-// CONFIGURACION
+// CONFIG
 // ═══════════════════════════════════════════
 const GATEWAY = 'http://localhost:8642';
-const chat = document.getElementById('chat');
+const chatLog = document.getElementById('chat-log');
 const input = document.getElementById('input');
 const sendBtn = document.getElementById('send-btn');
 const micBtn = document.getElementById('mic-btn');
 const statusDot = document.getElementById('status-dot');
-const modelInfo = document.getElementById('model-info');
+const termLog = document.getElementById('term-log');
 
 let isListening = false;
 let recognition = null;
 let isProcessing = false;
 
 // ═══════════════════════════════════════════
-// CONEXION
+// LOG
+// ═══════════════════════════════════════════
+function termLog_(text, type='ok') {
+  const div = document.createElement('div');
+  div.className = 'term-line';
+  div.innerHTML = `<span class="prompt">> </span><span class="${type}">${text}</span>`;
+  termLog.appendChild(div);
+  termLog.scrollTop = termLog.scrollHeight;
+}
+
+// ═══════════════════════════════════════════
+// CLOCK
+// ═══════════════════════════════════════════
+function updateClock() {
+  const now = new Date();
+  document.getElementById('clock-time').textContent = now.toLocaleTimeString('es-CL');
+  document.getElementById('clock-date').textContent = now.toLocaleDateString('es-CL', {weekday:'long', year:'numeric', month:'long', day:'numeric'});
+}
+setInterval(updateClock, 1000);
+updateClock();
+
+// ═══════════════════════════════════════════
+// HEALTH
 // ═══════════════════════════════════════════
 async function checkHealth() {
   try {
     const r = await fetch(`${GATEWAY}/health`);
     const d = await r.json();
-    statusDot.classList.remove('offline');
-    modelInfo.textContent = `${d.model} (${d.provider})`;
+    statusDot.className = 'idle';
+    document.getElementById('provider-val').textContent = d.provider;
+    document.getElementById('conn-val').textContent = 'ONLINE';
+    document.getElementById('conn-val').style.color = '#44ff88';
+    document.getElementById('model-label').textContent = d.model;
+    termLog_('Gateway online: ' + d.model);
+    
+    // Cargar tools
+    const tr = await fetch(`${GATEWAY}/tools`);
+    const td = await tr.json();
+    document.getElementById('tools-val').textContent = td.tools.length;
+    termLog_('Tools: ' + td.tools.join(', '));
     return true;
   } catch {
-    statusDot.classList.add('offline');
-    modelInfo.textContent = 'Sin conexion';
+    statusDot.className = 'offline';
+    document.getElementById('conn-val').textContent = 'OFFLINE';
+    document.getElementById('conn-val').style.color = '#ff4444';
+    termLog_('Gateway offline', 'err');
     return false;
   }
 }
@@ -116,41 +220,40 @@ async function checkHealth() {
 // ═══════════════════════════════════════════
 // CHAT
 // ═══════════════════════════════════════════
-function addMessage(text, isUser) {
+function addMsg(text, type='ai') {
   const div = document.createElement('div');
-  div.className = `msg ${isUser ? 'user' : 'ai'}`;
+  div.className = `msg ${type}`;
   div.textContent = text;
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-  return div;
+  chatLog.appendChild(div);
+  chatLog.scrollTop = chatLog.scrollHeight;
 }
 
-function addTyping() {
-  const div = document.createElement('div');
-  div.className = 'typing';
-  div.id = 'typing';
-  div.innerHTML = '<span></span><span></span><span></span>';
-  chat.appendChild(div);
-  chat.scrollTop = chat.scrollHeight;
-  return div;
+function setTyping(on) {
+  let t = document.getElementById('typing');
+  if (on && !t) {
+    t = document.createElement('div');
+    t.id = 'typing';
+    t.className = 'typing';
+    t.textContent = 'Procesando...';
+    chatLog.appendChild(t);
+    chatLog.scrollTop = chatLog.scrollHeight;
+  } else if (!on && t) {
+    t.remove();
+  }
 }
 
-function removeTyping() {
-  const t = document.getElementById('typing');
-  if (t) t.remove();
-}
-
-async function sendMessage() {
+async function send() {
   const text = input.value.trim();
   if (!text || isProcessing) return;
   
   isProcessing = true;
   sendBtn.disabled = true;
   input.value = '';
-  input.style.height = 'auto';
+  statusDot.className = 'thinking';
   
-  addMessage(text, true);
-  addTyping();
+  addMsg(text, 'user');
+  termLog_('>> ' + text.substring(0, 60));
+  setTyping(true);
   
   try {
     const r = await fetch(`${GATEWAY}/chat`, {
@@ -159,121 +262,101 @@ async function sendMessage() {
       body: JSON.stringify({message: text})
     });
     const d = await r.json();
-    removeTyping();
-    addMessage(d.response || d.error || 'Sin respuesta', false);
+    setTyping(false);
+    addMsg(d.response || d.error || 'Sin respuesta');
+    termLog_('<< ' + (d.response || '').substring(0, 60));
   } catch (e) {
-    removeTyping();
-    addMessage('Error de conexion: ' + e.message, false);
+    setTyping(false);
+    addMsg('Error: ' + e.message, 'error');
+    termLog_('Error: ' + e.message, 'err');
   }
   
+  statusDot.className = 'idle';
   isProcessing = false;
   sendBtn.disabled = false;
   input.focus();
 }
 
 // ═══════════════════════════════════════════
-// VOZ - STT (Speech-to-Text)
+// VOZ
 // ═══════════════════════════════════════════
 function initSpeech() {
   if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
     micBtn.style.display = 'none';
     return;
   }
-  
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  recognition = new SpeechRecognition();
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  recognition = new SR();
   recognition.lang = 'es-ES';
   recognition.continuous = false;
   recognition.interimResults = true;
   
   recognition.onresult = (e) => {
-    let transcript = '';
-    for (let i = e.resultIndex; i < e.results.length; i++) {
-      transcript += e.results[i][0].transcript;
-    }
-    input.value = transcript;
-    input.style.height = 'auto';
-    input.style.height = input.scrollHeight + 'px';
+    let t = '';
+    for (let i = e.resultIndex; i < e.results.length; i++) t += e.results[i][0].transcript;
+    input.value = t;
   };
-  
   recognition.onend = () => {
     isListening = false;
     micBtn.classList.remove('recording');
-    if (input.value.trim()) sendMessage();
+    statusDot.className = 'idle';
+    if (input.value.trim()) send();
   };
-  
   recognition.onerror = () => {
     isListening = false;
     micBtn.classList.remove('recording');
+    statusDot.className = 'idle';
   };
 }
 
 function toggleMic() {
   if (!recognition) return;
-  
   if (isListening) {
     recognition.stop();
     isListening = false;
     micBtn.classList.remove('recording');
+    statusDot.className = 'idle';
   } else {
     recognition.start();
     isListening = true;
     micBtn.classList.add('recording');
+    statusDot.className = 'listening';
   }
 }
 
-// ═══════════════════════════════════════════
-// VOZ - TTS (Text-to-Speech)
-// ═══════════════════════════════════════════
 function speak(text) {
   if (!('speechSynthesis' in window)) return;
-  
-  // Limpiar texto de codigo y emojis
-  const clean = text.replace(/```[\s\S]*?```/g, ' bloque de codigo ')
-                     .replace(/[^\w\s.,;:!?¡¿áéíóúñü]/g, '')
-                     .trim();
-  
+  const clean = text.replace(/```[\s\S]*?```/g, ' bloque de codigo ').replace(/[^\w\s.,;:!?¡¿áéíóúñü]/g, '').trim();
   if (!clean) return;
-  
-  const utterance = new SpeechSynthesisUtterance(clean);
-  utterance.lang = 'es-ES';
-  utterance.rate = 1.0;
-  utterance.pitch = 1.0;
-  speechSynthesis.speak(utterance);
+  const u = new SpeechSynthesisUtterance(clean);
+  u.lang = 'es-ES';
+  u.rate = 1.0;
+  speechSynthesis.speak(u);
 }
 
 // ═══════════════════════════════════════════
 // TOAST
 // ═══════════════════════════════════════════
-function showToast(msg, duration = 3000) {
-  const toast = document.createElement('div');
-  toast.className = 'toast';
-  toast.textContent = msg;
-  document.body.appendChild(toast);
-  setTimeout(() => toast.remove(), duration);
+function showToast(msg) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.classList.add('show');
+  setTimeout(() => t.classList.remove('show'), 3000);
 }
 
 // ═══════════════════════════════════════════
-// EVENTOS
+// EVENTS
 // ═══════════════════════════════════════════
 input.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && !e.shiftKey) {
-    e.preventDefault();
-    sendMessage();
-  }
+  if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); send(); }
 });
-
-input.addEventListener('input', () => {
-  input.style.height = 'auto';
-  input.style.height = Math.min(input.scrollHeight, 120) + 'px';
-});
-
-sendBtn.addEventListener('click', sendMessage);
+sendBtn.addEventListener('click', send);
 micBtn.addEventListener('click', toggleMic);
 
 // ═══════════════════════════════════════════
 // INIT
 // ═══════════════════════════════════════════
+termLog_('Iniciando AI Agent Core...');
 checkHealth();
 initSpeech();
 setInterval(checkHealth, 30000);
