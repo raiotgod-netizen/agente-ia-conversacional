@@ -1,2 +1,19 @@
+# AI Agent Kit - Dependencias
+# Instalar con: pip install -r requirements.txt
+
+# Dependencias core
 requests>=2.28.0
 duckduckgo-search>=4.0
+
+# Dependencias opcionales para tools
+python-docx>=0.8.11  # Para leer archivos .docx
+pyttsx3>=2.90  # Para TTS local (opcional)
+SpeechRecognition>=3.10.0  # Para STT (opcional)
+
+# Dependencias para desarrollo
+pytest>=7.0.0
+pytest-cov>=4.0.0
+
+# Dependencias para Docker/produccion
+gunicorn>=21.0.0
+uvicorn>=0.23.0
